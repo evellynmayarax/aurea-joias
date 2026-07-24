@@ -4,6 +4,7 @@ import Hero from "./components/Hero";
 import Institutional from "./components/Institutional";
 import PromoBar from "./components/PromoBar";
 import Collections from "./components/Collections";
+import RingExperience from "./components/RingExperience";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Catalog />
         <Institutional />
         <Collections />
+        <RingExperience />
       </main>
     </>
   );
