@@ -1,6 +1,7 @@
 import Catalog from "./components/Catalog";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
+import Institutional from "./components/Institutional";
 import PromoBar from "./components/PromoBar";
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
       <main>
         <Hero />
         <Catalog />
+        <Institutional />
       </main>
     </>
   );
