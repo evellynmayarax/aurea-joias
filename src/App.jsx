@@ -3,6 +3,7 @@ import Header from "./components/Header";
 import Hero from "./components/Hero";
 import Institutional from "./components/Institutional";
 import PromoBar from "./components/PromoBar";
+import Collections from "./components/Collections";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Hero />
         <Catalog />
         <Institutional />
+        <Collections />
       </main>
     </>
   );
