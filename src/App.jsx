@@ -1,4 +1,5 @@
 import Header from "./components/Header";
+import Hero from "./components/Hero";
 import PromoBar from "./components/PromoBar";
 
 function App() {
@@ -7,7 +8,9 @@ function App() {
       <PromoBar />
       <Header />
 
-      <main></main>
+      <main>
+        <Hero />
+      </main>
     </>
   );
 }
