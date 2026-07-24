@@ -1,9 +1,15 @@
+import Header from "./components/Header";
+import PromoBar from "./components/PromoBar";
+
 function App() {
   return (
-    <main>
-      <h1>AURÉA</h1>
-    </main>
-  )
+    <>
+      <PromoBar />
+      <Header />
+
+      <main></main>
+    </>
+  );
 }
 
-export default App
+export default App;
