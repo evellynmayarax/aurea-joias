@@ -1,6 +1,6 @@
 .promo-bar {
   position: relative;
-  z-index: 20;
+  z-index: 60;
 
   width: 100%;
   height: 28px;
@@ -10,24 +10,34 @@
   color: var(--color-white);
 }
 
-.promo-bar__track {
+.promo-bar__viewport {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.promo-bar__container {
   display: flex;
+
   width: 100%;
   height: 100%;
 
-  transition: transform 600ms ease-in-out;
-  will-change: transform;
+  touch-action: pan-y pinch-zoom;
 }
 
-.promo-bar__track[data-transition="false"] {
-  transition: none;
-}
+.promo-bar__slide {
+  position: relative;
 
-.promo-bar__message {
   display: flex;
   flex: 0 0 100%;
   align-items: center;
   justify-content: center;
+
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  height: 100%;
+  overflow: hidden;
 
   padding-inline: 1rem;
 
@@ -44,13 +54,7 @@
     height: 24px;
   }
 
-  .promo-bar__message {
+  .promo-bar__slide {
     font-size: 0.5625rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .promo-bar__track {
-    transition: none;
   }
 }
