@@ -6,6 +6,7 @@ import PromoBar from "./components/PromoBar";
 import Collections from "./components/Collections";
 import RingExperience from "./components/RingExperience";
 import FinalCta from "./components/FinalCta";
+import Footer from "./components/Footer";
 
 
 
@@ -22,6 +23,7 @@ function App() {
         <Collections />
         <RingExperience />
         <FinalCta />
+        <Footer />
       </main>
     </>
   );
