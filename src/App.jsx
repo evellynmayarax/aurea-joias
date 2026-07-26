@@ -5,6 +5,9 @@ import Institutional from "./components/Institutional";
 import PromoBar from "./components/PromoBar";
 import Collections from "./components/Collections";
 import RingExperience from "./components/RingExperience";
+import FinalCta from "./components/FinalCta";
+
+
 
 function App() {
   return (
@@ -18,6 +21,7 @@ function App() {
         <Institutional />
         <Collections />
         <RingExperience />
+        <FinalCta />
       </main>
     </>
   );
