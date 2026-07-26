@@ -64,6 +64,19 @@
     outline: none;
 }
 
+/* Alinhamento do texto e da cena no desktop */
+@media (min-width: 901px) {
+    .ring-experience__inner {
+        align-items: start;
+        align-content: center;
+    }
+
+    .ring-experience__copy {
+        align-self: start;
+        padding-top: clamp(0.5rem, 6.5svh, 2.5rem);
+    }
+}
+
 @media (max-width: 900px) {
     .ring-experience {
         height: 180svh;
@@ -96,20 +109,23 @@
         grid-template-columns: 1fr;
         grid-template-rows: auto auto;
         align-content: start;
-        gap: clamp(4.5rem, 11vh, 6rem);
+        gap: clamp(1.5rem, 5svh, 2.5rem);
 
-        padding: 0.75rem 0 1.5rem;
+        padding: clamp(1.5rem, 4svh, 2.5rem) 0 1.5rem;
     }
 
     .ring-experience__copy {
         align-self: start;
 
         margin: 0;
+        padding-top: 4rem;
+
         inset-block-start: auto;
     }
 
     .ring-experience__title {
         max-width: 9ch;
+        padding-bottom: 3rem;
 
         font-size: clamp(3rem, 14vw, 4.75rem);
         line-height: 0.9;
@@ -120,6 +136,7 @@
 
         height: min(50svh, 27rem);
         min-height: 19rem;
+        margin-bottom: 8rem;
     }
 }
 
@@ -136,8 +153,8 @@
 
     .ring-experience__copy {
         margin: 0;
-        inset-block-start: auto;
 
+        inset-block-start: auto;
         opacity: 1;
         transform: none;
     }

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
 import ringModel from "../assets/3d/aurea-ring.glb?url";
 import "../styles/RingExperience.css";
 
@@ -50,6 +51,54 @@ function RingExperience() {
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.15;
 
+        /*
+         * O TrackballControls não tem os polos do OrbitControls.
+         * Assim, mouse e toque podem atravessar o topo e a base
+         * do anel e completar a volta em qualquer direção.
+         */
+        const controls = new TrackballControls(
+            camera,
+            canvas,
+        );
+
+        controls.noPan = true;
+        controls.noZoom = true;
+        controls.rotateSpeed = mobileMediaQuery.matches
+            ? 1
+            : 1.15;
+        controls.staticMoving = false;
+        controls.dynamicDampingFactor = 0.12;
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        function handleControlsStart() {
+            sceneContainer.classList.add(
+                "is-interacting",
+            );
+            canvas.style.cursor = "grabbing";
+        }
+
+        function handleControlsEnd() {
+            sceneContainer.classList.remove(
+                "is-interacting",
+            );
+            canvas.style.cursor = "grab";
+        }
+
+        controls.addEventListener(
+            "start",
+            handleControlsStart,
+        );
+
+        controls.addEventListener(
+            "end",
+            handleControlsEnd,
+        );
+
+        canvas.style.cursor = "grab";
+        canvas.style.touchAction = "none";
+        canvas.style.userSelect = "none";
+
         const pmremGenerator =
             new THREE.PMREMGenerator(renderer);
 
@@ -86,6 +135,21 @@ function RingExperience() {
             fillLight,
         );
 
+        /*
+         * As transformações da rolagem ficam isoladas neste grupo.
+         * A interação livre é aplicada pela câmera através do OrbitControls.
+         */
+        const scrollGroup = new THREE.Group();
+
+        scrollGroup.rotation.set(
+            -0.55,
+            0.25,
+            -0.18,
+        );
+        scrollGroup.position.y = -0.65;
+
+        scene.add(scrollGroup);
+
         const loader = new GLTFLoader();
 
         let ring = null;
@@ -94,6 +158,11 @@ function RingExperience() {
         let currentProgress = 0;
         let isVisible = false;
         let destroyed = false;
+        let framingRadius = 0;
+
+        const scrollTravel = mobileMediaQuery.matches
+            ? 0.4
+            : 0.55;
 
         function disposeModel(model) {
             model.traverse((child) => {
@@ -149,12 +218,27 @@ function RingExperience() {
             const scale =
                 desiredSize / largestDimension;
             ring.scale.setScalar(scale);
+            ring.updateMatrixWorld(true);
 
-            ring.rotation.set(
-                -0.55,
-                0.25,
-                -0.18,
-            );
+            const fittedBounds =
+                new THREE.Box3().setFromObject(ring);
+
+            const fittedSphere =
+                fittedBounds.getBoundingSphere(
+                    new THREE.Sphere(),
+                );
+
+            /*
+             * A esfera garante espaço para qualquer rotação.
+             * A margem extra também considera o deslocamento vertical
+             * produzido pela rolagem.
+             */
+            framingRadius =
+                fittedSphere.radius *
+                    (mobileMediaQuery.matches
+                        ? 1.24
+                        : 1.18) +
+                scrollTravel;
 
             ring.traverse((child) => {
                 if (!child.isMesh) {
@@ -175,7 +259,8 @@ function RingExperience() {
                 });
             });
 
-            scene.add(ring);
+            scrollGroup.add(ring);
+            fitCameraToModel();
 
             sceneContainer.classList.add(
                 "is-loaded",
@@ -187,7 +272,8 @@ function RingExperience() {
             const viewportHeight = window.innerHeight;
 
             const animationStart =
-                viewportHeight * 0.85;
+                viewportHeight *
+                (mobileMediaQuery.matches ? 1.05 : 0.85);
 
             const animationEnd =
                 -(rect.height - viewportHeight);
@@ -233,6 +319,62 @@ function RingExperience() {
 
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
+            controls.handleResize();
+            fitCameraToModel();
+        }
+
+        function fitCameraToModel() {
+            if (!framingRadius || camera.aspect <= 0) {
+                return;
+            }
+
+            const verticalHalfFov =
+                THREE.MathUtils.degToRad(
+                    camera.fov / 2,
+                );
+
+            const horizontalHalfFov = Math.atan(
+                Math.tan(verticalHalfFov) *
+                    camera.aspect,
+            );
+
+            const limitingHalfFov = Math.max(
+                0.01,
+                Math.min(
+                    verticalHalfFov,
+                    horizontalHalfFov,
+                ),
+            );
+
+            const distance =
+                framingRadius /
+                Math.sin(limitingHalfFov);
+
+            const viewDirection = camera.position
+                .clone()
+                .sub(controls.target);
+
+            if (viewDirection.lengthSq() < 0.0001) {
+                viewDirection.set(0, 0, 1);
+            }
+
+            camera.position
+                .copy(controls.target)
+                .addScaledVector(
+                    viewDirection.normalize(),
+                    distance,
+                );
+
+            camera.near = Math.max(
+                0.01,
+                distance - framingRadius * 2,
+            );
+
+            camera.far =
+                distance + framingRadius * 4;
+
+            camera.updateProjectionMatrix();
+            controls.update();
         }
 
         const resizeObserver =
@@ -259,6 +401,12 @@ function RingExperience() {
             { passive: true },
         );
 
+        window.addEventListener(
+            "resize",
+            updateScrollProgress,
+            { passive: true },
+        );
+
         updateScrollProgress();
         resizeRenderer();
 
@@ -275,36 +423,36 @@ function RingExperience() {
                     currentProgress) *
                 0.075;
 
-            if (ring) {
-                ring.rotation.y =
-                    0.25 +
+            scrollGroup.rotation.y =
+                0.25 +
+                currentProgress *
+                Math.PI *
+                2;
+
+            scrollGroup.rotation.x =
+                -0.55 +
+                Math.sin(
                     currentProgress *
-                    Math.PI *
+                    Math.PI,
+                ) *
+                0.25;
+
+            scrollGroup.rotation.z =
+                -0.18 +
+                currentProgress * 0.35;
+
+            scrollGroup.position.y =
+                -scrollTravel +
+                currentProgress *
+                    scrollTravel *
                     2;
 
-                ring.rotation.x =
-                    -0.55 +
-                    Math.sin(
-                        currentProgress *
-                        Math.PI,
-                    ) *
-                    0.25;
-
-                ring.rotation.z =
-                    -0.18 +
-                    currentProgress * 0.35;
-
-                ring.position.y =
-                    -0.65 +
-                    currentProgress * 1.3;
-            }
-
             const copyStart = mobileMediaQuery.matches
-                ? 0.38
+                ? 0.02
                 : 0.08;
 
             const copyEnd = mobileMediaQuery.matches
-                ? 0.62
+                ? 0.16
                 : 0.36;
 
             const copyProgress = THREE.MathUtils.clamp(
@@ -334,6 +482,7 @@ function RingExperience() {
             copy.style.transform =
                 `translate3d(0, ${copyMovement}rem, 0)`;
 
+            controls.update();
             renderer.render(scene, camera);
         }
 
@@ -349,14 +498,38 @@ function RingExperience() {
                 updateScrollProgress,
             );
 
+            window.removeEventListener(
+                "resize",
+                updateScrollProgress,
+            );
+
+            controls.removeEventListener(
+                "start",
+                handleControlsStart,
+            );
+
+            controls.removeEventListener(
+                "end",
+                handleControlsEnd,
+            );
+
+            controls.dispose();
+            canvas.style.cursor = "";
+            canvas.style.touchAction = "";
+            canvas.style.userSelect = "";
+            sceneContainer.classList.remove(
+                "is-interacting",
+            );
+
             resizeObserver.disconnect();
             visibilityObserver.disconnect();
 
             if (ring) {
-                scene.remove(ring);
+                scrollGroup.remove(ring);
                 disposeModel(ring);
             }
 
+            scene.remove(scrollGroup);
             environment.texture.dispose();
             pmremGenerator.dispose();
             renderer.dispose();
@@ -386,7 +559,8 @@ function RingExperience() {
                     className="ring-experience__scene"
                     ref={sceneContainerRef}
                     role="img"
-                    aria-label="Anel dourado girando em três dimensões"
+                    aria-label="Modelo 3D interativo de um anel dourado. Arraste para explorar e role a página para acompanhar a animação."
+                    title="Arraste para girar o anel"
                 >
                     <canvas
                         className="ring-experience__canvas"
