@@ -1,8 +1,22 @@
-import { useEffect, useRef } from "react";
+import {
+    Fragment,
+    useEffect,
+    useRef,
+} from "react";
 
 import createRingScene from "../data/createRingScene";
 
 import "../styles/RingExperience.css";
+
+const titleWords = [
+    "Design",
+    "que",
+    "se",
+    "revela",
+    "em",
+    "cada",
+    "movimento.",
+];
 
 function RingExperience() {
     const sectionRef = useRef(null);
@@ -35,8 +49,21 @@ function RingExperience() {
                     <h2
                         className="ring-experience__title"
                         id="ring-experience-title"
+                        aria-label="Design que se revela em cada movimento."
                     >
-                        Design que se revela em cada movimento.
+                        {titleWords.map((word, index) => (
+                            <Fragment key={`${word}-${index}`}>
+                                <span
+                                    className="ring-experience__word"
+                                    aria-hidden="true"
+                                >
+                                    {word}
+                                </span>
+
+                                {index < titleWords.length - 1 &&
+                                    " "}
+                            </Fragment>
+                        ))}
                     </h2>
                 </div>
 

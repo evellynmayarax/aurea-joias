@@ -215,9 +215,16 @@ function createRingScene({
     let destroyed = false;
     let framingRadius = 0;
 
+    const copyWords = Array.from(
+        copy.querySelectorAll(".ring-experience__word"),
+    );
+
     const scrollTravel = mobileMediaQuery.matches
         ? 0.4
         : 0.55;
+
+    copy.style.opacity = "1";
+    copy.style.transform = "none";
 
     function disposeModel(model) {
         model.traverse((child) => {
@@ -503,12 +510,12 @@ function createRingScene({
             2;
 
         const copyStart = mobileMediaQuery.matches
-            ? 0.02
+            ? 0.03
             : 0.08;
 
         const copyEnd = mobileMediaQuery.matches
-            ? 0.16
-            : 0.36;
+            ? 0.22
+            : 0.34;
 
         const copyProgress = THREE.MathUtils.clamp(
             (currentProgress - copyStart) /
@@ -517,20 +524,49 @@ function createRingScene({
             1,
         );
 
-        const copyMovementDistance =
-            mobileMediaQuery.matches
-                ? 1.25
-                : 2.5;
+        copyWords.forEach((word, index) => {
+            const wordPosition =
+                copyWords.length > 1
+                    ? index /
+                    (copyWords.length - 1)
+                    : 0;
 
-        const copyMovement =
-            (1 - copyProgress) *
-            copyMovementDistance;
+            const wordStart =
+                wordPosition * 0.42;
 
-        copy.style.opacity =
-            String(copyProgress);
+            const wordProgress =
+                THREE.MathUtils.clamp(
+                    (copyProgress - wordStart) /
+                    0.58,
+                    0,
+                    1,
+                );
 
-        copy.style.transform =
-            `translate3d(0, ${copyMovement}rem, 0)`;
+            const easedProgress =
+                1 -
+                Math.pow(
+                    1 - wordProgress,
+                    3,
+                );
+
+            const movement =
+                (1 - easedProgress) *
+                (mobileMediaQuery.matches
+                    ? 0.75
+                    : 1.05);
+
+            const blur =
+                (1 - easedProgress) * 6;
+
+            word.style.opacity =
+                String(easedProgress);
+
+            word.style.transform =
+                `translate3d(0, ${movement}em, 0)`;
+
+            word.style.filter =
+                `blur(${blur}px)`;
+        });
 
         controls.update();
         renderer.render(scene, camera);
@@ -581,6 +617,12 @@ function createRingScene({
 
         copy.style.opacity = "";
         copy.style.transform = "";
+
+        copyWords.forEach((word) => {
+            word.style.opacity = "";
+            word.style.transform = "";
+            word.style.filter = "";
+        });
 
         sceneContainer.classList.remove(
             "is-loaded",
