@@ -116,7 +116,7 @@ function Footer() {
 
                     <div
                         className="footer__column"
-                        id="contato"
+                        id="contato-rodape"
                     >
                         <h2 className="footer__title">
                             Contato
