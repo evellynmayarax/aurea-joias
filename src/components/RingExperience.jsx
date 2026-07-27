@@ -20,6 +20,10 @@ function RingExperience() {
         const mobileMediaQuery = window.matchMedia(
             "(max-width: 640px)",
         );
+        const desktopInteractionMediaQuery =
+            window.matchMedia(
+                "(min-width: 1025px) and (hover: hover) and (pointer: fine)",
+            );
 
         if (!section || !sceneContainer || !canvas || !copy) {
             return undefined;
@@ -71,7 +75,49 @@ function RingExperience() {
         controls.target.set(0, 0, 0);
         controls.update();
 
+        function updateInteractionMode() {
+            const canInteract =
+                desktopInteractionMediaQuery.matches;
+
+            controls.enabled = canInteract;
+
+            canvas.style.cursor = canInteract
+                ? "grab"
+                : "default";
+
+            canvas.style.touchAction = canInteract
+                ? "none"
+                : "auto";
+
+            canvas.style.pointerEvents = canInteract
+                ? "auto"
+                : "none";
+
+            canvas.style.userSelect = canInteract
+                ? "none"
+                : "";
+
+            sceneContainer.classList.toggle(
+                "is-interactive",
+                canInteract,
+            );
+
+            if (canInteract) {
+                sceneContainer.title =
+                    "Arraste para girar o anel";
+            } else {
+                sceneContainer.removeAttribute("title");
+                sceneContainer.classList.remove(
+                    "is-interacting",
+                );
+            }
+        }
+
         function handleControlsStart() {
+            if (!controls.enabled) {
+                return;
+            }
+
             sceneContainer.classList.add(
                 "is-interacting",
             );
@@ -79,6 +125,10 @@ function RingExperience() {
         }
 
         function handleControlsEnd() {
+            if (!controls.enabled) {
+                return;
+            }
+
             sceneContainer.classList.remove(
                 "is-interacting",
             );
@@ -95,9 +145,12 @@ function RingExperience() {
             handleControlsEnd,
         );
 
-        canvas.style.cursor = "grab";
-        canvas.style.touchAction = "none";
-        canvas.style.userSelect = "none";
+        updateInteractionMode();
+
+        desktopInteractionMediaQuery.addEventListener(
+            "change",
+            updateInteractionMode,
+        );
 
         const pmremGenerator =
             new THREE.PMREMGenerator(renderer);
@@ -235,9 +288,9 @@ function RingExperience() {
              */
             framingRadius =
                 fittedSphere.radius *
-                    (mobileMediaQuery.matches
-                        ? 1.24
-                        : 1.18) +
+                (mobileMediaQuery.matches
+                    ? 1.24
+                    : 1.18) +
                 scrollTravel;
 
             ring.traverse((child) => {
@@ -335,7 +388,7 @@ function RingExperience() {
 
             const horizontalHalfFov = Math.atan(
                 Math.tan(verticalHalfFov) *
-                    camera.aspect,
+                camera.aspect,
             );
 
             const limitingHalfFov = Math.max(
@@ -444,8 +497,8 @@ function RingExperience() {
             scrollGroup.position.y =
                 -scrollTravel +
                 currentProgress *
-                    scrollTravel *
-                    2;
+                scrollTravel *
+                2;
 
             const copyStart = mobileMediaQuery.matches
                 ? 0.02
@@ -513,13 +566,21 @@ function RingExperience() {
                 handleControlsEnd,
             );
 
+            desktopInteractionMediaQuery.removeEventListener(
+                "change",
+                updateInteractionMode,
+            );
+
             controls.dispose();
             canvas.style.cursor = "";
             canvas.style.touchAction = "";
+            canvas.style.pointerEvents = "";
             canvas.style.userSelect = "";
             sceneContainer.classList.remove(
+                "is-interactive",
                 "is-interacting",
             );
+            sceneContainer.removeAttribute("title");
 
             resizeObserver.disconnect();
             visibilityObserver.disconnect();
@@ -559,8 +620,7 @@ function RingExperience() {
                     className="ring-experience__scene"
                     ref={sceneContainerRef}
                     role="img"
-                    aria-label="Modelo 3D interativo de um anel dourado. Arraste para explorar e role a página para acompanhar a animação."
-                    title="Arraste para girar o anel"
+                    aria-label="Modelo 3D de um anel dourado que gira conforme a rolagem da página."
                 >
                     <canvas
                         className="ring-experience__canvas"
