@@ -1,10 +1,4 @@
-import {
-    Fragment,
-    useEffect,
-    useRef,
-} from "react";
-
-import createRingScene from "../data/createRingScene";
+import { Fragment, useEffect, useRef } from "react";
 
 import "../styles/RingExperience.css";
 
@@ -25,14 +19,83 @@ function RingExperience() {
     const copyRef = useRef(null);
 
     useEffect(() => {
-        const destroyRingScene = createRingScene({
-            section: sectionRef.current,
-            sceneContainer: sceneContainerRef.current,
-            canvas: canvasRef.current,
-            copy: copyRef.current,
-        });
+        const section = sectionRef.current;
+        const sceneContainer = sceneContainerRef.current;
+        const canvas = canvasRef.current;
+        const copy = copyRef.current;
 
-        return destroyRingScene;
+        if (!section || !sceneContainer || !canvas || !copy) {
+            return undefined;
+        }
+
+        let destroyRingScene = null;
+        let loadObserver = null;
+        let cancelled = false;
+        let isLoading = false;
+
+        async function loadRingScene() {
+            if (cancelled || isLoading || destroyRingScene) {
+                return;
+            }
+
+            isLoading = true;
+            loadObserver?.disconnect();
+
+            try {
+                const { default: createRingScene } = await import(
+                    "../data/createRingScene"
+                );
+
+                if (cancelled) {
+                    return;
+                }
+
+                destroyRingScene = createRingScene({
+                    section,
+                    sceneContainer,
+                    canvas,
+                    copy,
+                });
+            } catch (error) {
+                if (cancelled) {
+                    return;
+                }
+
+                isLoading = false;
+                sceneContainer.classList.add("has-error");
+
+                console.error(
+                    "Não foi possível carregar a experiência 3D do anel.",
+                    error,
+                );
+            }
+        }
+
+        if ("IntersectionObserver" in window) {
+            loadObserver = new IntersectionObserver(
+                ([entry]) => {
+                    if (entry.isIntersecting) {
+                        loadRingScene();
+                    }
+                },
+                {
+                    threshold: 0,
+                    rootMargin: "400px 0px",
+                },
+            );
+
+            loadObserver.observe(section);
+        } else {
+            loadRingScene();
+        }
+
+        return () => {
+            cancelled = true;
+            loadObserver?.disconnect();
+            destroyRingScene?.();
+
+            sceneContainer.classList.remove("has-error");
+        };
     }, []);
 
     return (

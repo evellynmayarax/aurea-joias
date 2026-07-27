@@ -13,7 +13,7 @@ function createRingScene({
     copy,
 }) {
     if (!section || !sceneContainer || !canvas || !copy) {
-        return () => { };
+        return () => {};
     }
 
     const mobileMediaQuery = window.matchMedia(
