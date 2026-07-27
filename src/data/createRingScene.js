@@ -11,9 +11,11 @@ function createRingScene({
     sceneContainer,
     canvas,
     copy,
+    onReady = () => { },
+    onError = () => { },
 }) {
     if (!section || !sceneContainer || !canvas || !copy) {
-        return () => {};
+        return () => { };
     }
 
     const mobileMediaQuery = window.matchMedia(
@@ -213,6 +215,7 @@ function createRingScene({
     let currentProgress = 0;
     let isVisible = false;
     let destroyed = false;
+    let hasFailed = false;
     let framingRadius = 0;
 
     const copyWords = Array.from(
@@ -225,6 +228,31 @@ function createRingScene({
 
     copy.style.opacity = "1";
     copy.style.transform = "none";
+
+    function failScene(error) {
+        if (destroyed || hasFailed) {
+            return;
+        }
+
+        hasFailed = true;
+        window.cancelAnimationFrame(frameId);
+        onError(error);
+    }
+
+    function handleContextLost(event) {
+        event.preventDefault();
+
+        failScene(
+            new Error(
+                "O contexto WebGL foi perdido durante a renderização.",
+            ),
+        );
+    }
+
+    canvas.addEventListener(
+        "webglcontextlost",
+        handleContextLost,
+    );
 
     function disposeModel(model) {
         model.traverse((child) => {
@@ -300,92 +328,116 @@ function createRingScene({
         controls.update();
     }
 
-    loader.load(ringModel, (gltf) => {
-        if (destroyed) {
-            disposeModel(gltf.scene);
-            return;
-        }
-
-        ring = gltf.scene;
-
-        const bounds =
-            new THREE.Box3().setFromObject(ring);
-
-        const center = bounds.getCenter(
-            new THREE.Vector3(),
-        );
-
-        const size = bounds.getSize(
-            new THREE.Vector3(),
-        );
-
-        ring.position.sub(center);
-
-        const largestDimension = Math.max(
-            size.x,
-            size.y,
-            size.z,
-        );
-
-        const desiredSize = mobileMediaQuery.matches
-            ? 2.4
-            : 3.2;
-
-        const scale =
-            desiredSize / largestDimension;
-
-        ring.scale.setScalar(scale);
-        ring.updateMatrixWorld(true);
-
-        const fittedBounds =
-            new THREE.Box3().setFromObject(ring);
-
-        const fittedSphere =
-            fittedBounds.getBoundingSphere(
-                new THREE.Sphere(),
-            );
-
-        /*
-         * A esfera delimitadora mantém o anel enquadrado
-         * durante qualquer rotação.
-         */
-        framingRadius =
-            fittedSphere.radius *
-            (mobileMediaQuery.matches
-                ? 1.24
-                : 1.18) +
-            scrollTravel;
-
-        ring.traverse((child) => {
-            if (!child.isMesh) {
+    loader.load(
+        ringModel,
+        (gltf) => {
+            if (destroyed || hasFailed) {
+                disposeModel(gltf.scene);
                 return;
             }
 
-            const materials = Array.isArray(
-                child.material,
-            )
-                ? child.material
-                : [child.material];
+            ring = gltf.scene;
 
-            materials.forEach((material) => {
-                if (!material) {
+            const bounds =
+                new THREE.Box3().setFromObject(ring);
+
+            const center = bounds.getCenter(
+                new THREE.Vector3(),
+            );
+
+            const size = bounds.getSize(
+                new THREE.Vector3(),
+            );
+
+            ring.position.sub(center);
+
+            const largestDimension = Math.max(
+                size.x,
+                size.y,
+                size.z,
+            );
+
+            if (
+                !Number.isFinite(largestDimension) ||
+                largestDimension <= 0
+            ) {
+                failScene(
+                    new Error(
+                        "O modelo 3D do anel não possui dimensões válidas.",
+                    ),
+                );
+                return;
+            }
+
+            const desiredSize =
+                mobileMediaQuery.matches
+                    ? 2.4
+                    : 3.2;
+
+            const scale =
+                desiredSize / largestDimension;
+
+            ring.scale.setScalar(scale);
+            ring.updateMatrixWorld(true);
+
+            const fittedBounds =
+                new THREE.Box3().setFromObject(ring);
+
+            const fittedSphere =
+                fittedBounds.getBoundingSphere(
+                    new THREE.Sphere(),
+                );
+
+            /*
+             * A esfera delimitadora mantém o anel
+             * enquadrado durante qualquer rotação.
+             */
+            framingRadius =
+                fittedSphere.radius *
+                (mobileMediaQuery.matches
+                    ? 1.24
+                    : 1.18) +
+                scrollTravel;
+
+            ring.traverse((child) => {
+                if (!child.isMesh) {
                     return;
                 }
 
-                material.metalness = 1;
-                material.roughness = 0.18;
-                material.color.set("#d39a32");
-                material.needsUpdate = true;
+                const materials = Array.isArray(
+                    child.material,
+                )
+                    ? child.material
+                    : [child.material];
+
+                materials.forEach((material) => {
+                    if (!material) {
+                        return;
+                    }
+
+                    material.metalness = 1;
+                    material.roughness = 0.18;
+                    material.color.set("#d39a32");
+                    material.needsUpdate = true;
+                });
             });
-        });
 
-        scrollGroup.add(ring);
-        fitCameraToModel();
-
-        sceneContainer.classList.add(
-            "is-loaded",
-        );
-    });
+            scrollGroup.add(ring);
+            fitCameraToModel();
+            renderer.render(scene, camera);
+            onReady();
+        },
+        undefined,
+        (error) => {
+            failScene(
+                error instanceof Error
+                    ? error
+                    : new Error(
+                        "Não foi possível carregar o modelo 3D do anel.",
+                    ),
+            );
+        },
+    );
 
     function updateScrollProgress() {
         const rect = section.getBoundingClientRect();
@@ -475,6 +527,10 @@ function createRingScene({
     resizeRenderer();
 
     function animate() {
+        if (destroyed || hasFailed) {
+            return;
+        }
+
         frameId =
             window.requestAnimationFrame(animate);
 
@@ -608,6 +664,11 @@ function createRingScene({
             updateInteractionMode,
         );
 
+        canvas.removeEventListener(
+            "webglcontextlost",
+            handleContextLost,
+        );
+
         controls.dispose();
 
         canvas.style.cursor = "";
@@ -625,7 +686,6 @@ function createRingScene({
         });
 
         sceneContainer.classList.remove(
-            "is-loaded",
             "is-interactive",
             "is-interacting",
         );

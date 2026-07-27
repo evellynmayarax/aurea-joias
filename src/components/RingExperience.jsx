@@ -1,5 +1,11 @@
-import { Fragment, useEffect, useRef } from "react";
+import {
+    Fragment,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
 
+import fallbackRingImage from "../assets/catalogue/anel-aura.webp";
 import "../styles/RingExperience.css";
 
 const titleWords = [
@@ -12,11 +18,39 @@ const titleWords = [
     "movimento.",
 ];
 
+function supportsWebGL2() {
+    try {
+        const testCanvas = document.createElement("canvas");
+        const context = testCanvas.getContext("webgl2");
+
+        if (!context) {
+            return false;
+        }
+
+        context
+            .getExtension("WEBGL_lose_context")
+            ?.loseContext();
+
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 function RingExperience() {
     const sectionRef = useRef(null);
     const sceneContainerRef = useRef(null);
     const canvasRef = useRef(null);
     const copyRef = useRef(null);
+    const [sceneState, setSceneState] =
+        useState(() =>
+            typeof window !== "undefined" &&
+                window.matchMedia(
+                    "(prefers-reduced-motion: reduce)",
+                ).matches
+                ? "static"
+                : "loading",
+        );
 
     useEffect(() => {
         const section = sectionRef.current;
@@ -32,21 +66,68 @@ function RingExperience() {
         let loadObserver = null;
         let cancelled = false;
         let isLoading = false;
+        let loadAttempt = 0;
 
-        async function loadRingScene() {
-            if (cancelled || isLoading || destroyRingScene) {
+        const reducedMotionMediaQuery =
+            window.matchMedia(
+                "(prefers-reduced-motion: reduce)",
+            );
+
+        function reportSceneError(error) {
+            if (cancelled) {
                 return;
             }
 
+            const destroyCurrentScene =
+                destroyRingScene;
+
+            destroyRingScene = null;
+            isLoading = false;
+            loadAttempt += 1;
+
+            destroyCurrentScene?.();
+            setSceneState("fallback");
+
+            console.error(
+                "Não foi possível exibir a experiência 3D do anel.",
+                error,
+            );
+        }
+
+        async function loadRingScene() {
+            if (
+                cancelled ||
+                isLoading ||
+                destroyRingScene ||
+                reducedMotionMediaQuery.matches
+            ) {
+                return;
+            }
+
+            if (!supportsWebGL2()) {
+                loadObserver?.disconnect();
+                setSceneState("fallback");
+                return;
+            }
+
+            const currentAttempt = loadAttempt + 1;
+
+            loadAttempt = currentAttempt;
             isLoading = true;
             loadObserver?.disconnect();
+            setSceneState("loading");
 
             try {
                 const { default: createRingScene } = await import(
                     "../data/createRingScene"
                 );
 
-                if (cancelled) {
+                if (
+                    cancelled ||
+                    currentAttempt !== loadAttempt ||
+                    reducedMotionMediaQuery.matches
+                ) {
+                    isLoading = false;
                     return;
                 }
 
@@ -55,23 +136,46 @@ function RingExperience() {
                     sceneContainer,
                     canvas,
                     copy,
+                    onReady: () => {
+                        if (
+                            !cancelled &&
+                            currentAttempt ===
+                            loadAttempt
+                        ) {
+                            setSceneState("ready");
+                        }
+                    },
+                    onError: reportSceneError,
                 });
+
+                isLoading = false;
             } catch (error) {
-                if (cancelled) {
+                if (
+                    cancelled ||
+                    currentAttempt !== loadAttempt
+                ) {
                     return;
                 }
 
-                isLoading = false;
-                sceneContainer.classList.add("has-error");
-
-                console.error(
-                    "Não foi possível carregar a experiência 3D do anel.",
-                    error,
-                );
+                reportSceneError(error);
             }
         }
 
-        if ("IntersectionObserver" in window) {
+        function observeScene() {
+            if (
+                cancelled ||
+                reducedMotionMediaQuery.matches
+            ) {
+                return;
+            }
+
+            loadObserver?.disconnect();
+
+            if (!("IntersectionObserver" in window)) {
+                loadRingScene();
+                return;
+            }
+
             loadObserver = new IntersectionObserver(
                 ([entry]) => {
                     if (entry.isIntersecting) {
@@ -85,22 +189,52 @@ function RingExperience() {
             );
 
             loadObserver.observe(section);
-        } else {
-            loadRingScene();
+        }
+
+        function updateMotionPreference() {
+            loadObserver?.disconnect();
+            loadAttempt += 1;
+            isLoading = false;
+
+            if (reducedMotionMediaQuery.matches) {
+                const destroyCurrentScene =
+                    destroyRingScene;
+
+                destroyRingScene = null;
+                destroyCurrentScene?.();
+                setSceneState("static");
+                return;
+            }
+
+            setSceneState("loading");
+            observeScene();
+        }
+
+        reducedMotionMediaQuery.addEventListener(
+            "change",
+            updateMotionPreference,
+        );
+
+        if (!reducedMotionMediaQuery.matches) {
+            observeScene();
         }
 
         return () => {
             cancelled = true;
+            loadAttempt += 1;
             loadObserver?.disconnect();
             destroyRingScene?.();
 
-            sceneContainer.classList.remove("has-error");
+            reducedMotionMediaQuery.removeEventListener(
+                "change",
+                updateMotionPreference,
+            );
         };
     }, []);
 
     return (
         <section
-            className="ring-experience"
+            className={`ring-experience ring-experience--${sceneState}`}
             ref={sectionRef}
             aria-labelledby="ring-experience-title"
         >
@@ -131,16 +265,29 @@ function RingExperience() {
                 </div>
 
                 <div
-                    className="ring-experience__scene"
+                    className={`ring-experience__scene is-${sceneState}`}
                     ref={sceneContainerRef}
                     role="img"
-                    aria-label="Modelo 3D de um anel dourado que gira conforme a rolagem da página."
+                    aria-label="Anel dourado da Auréa."
                 >
                     <canvas
                         className="ring-experience__canvas"
                         ref={canvasRef}
                         aria-hidden="true"
                     />
+
+                    <div
+                        className="ring-experience__fallback"
+                        aria-hidden="true"
+                    >
+                        <img
+                            className="ring-experience__fallback-image"
+                            src={fallbackRingImage}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                        />
+                    </div>
                 </div>
             </div>
         </section>
