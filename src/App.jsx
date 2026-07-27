@@ -23,8 +23,8 @@ function App() {
         <Collections />
         <RingExperience />
         <FinalCta />
-        <Footer />
       </main>
+      <Footer />
     </>
   );
 }
