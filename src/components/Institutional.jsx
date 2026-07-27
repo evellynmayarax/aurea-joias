@@ -1,8 +1,13 @@
 import AutoScroll from "embla-carousel-auto-scroll";
 import useEmblaCarousel from "embla-carousel-react";
+import { motion } from "motion/react";
+
 import institutionalDesktop from "../assets/institutional/institutional-image-desktop.webp";
 import institutionalMobile from "../assets/institutional/institutional-image-mobile.webp";
+
 import "../styles/Institutional.css";
+
+const ease = [0.22, 1, 0.36, 1];
 
 const galleryPositions = [
     "center 20%",
@@ -115,21 +120,56 @@ function Institutional() {
             </div>
 
             <div className="institutional__content">
-                <h2
+                <motion.h2
                     className="institutional__title"
                     id="institutional-title"
+                    initial={{
+                        opacity: 0,
+                        y: 42,
+                    }}
+                    whileInView={{
+                        opacity: 1,
+                        y: 0,
+                    }}
+                    viewport={{
+                        once: true,
+                        amount: 0.45,
+                    }}
+                    transition={{
+                        duration: 0.9,
+                        ease,
+                    }}
                 >
                     Criamos pensando
                     <br />
                     em você, para você
-                </h2>
+                </motion.h2>
 
-                <p className="institutional__description">
+                <motion.p
+                    className="institutional__description"
+                    initial={{
+                        opacity: 0,
+                        y: 28,
+                    }}
+                    whileInView={{
+                        opacity: 1,
+                        y: 0,
+                    }}
+                    viewport={{
+                        once: true,
+                        amount: 0.45,
+                    }}
+                    transition={{
+                        duration: 0.85,
+                        delay: 0.15,
+                        ease,
+                    }}
+                >
                     Cada peça nasce do encontro entre formas essenciais,
                     acabamento cuidadoso e conforto. Joias pensadas para
                     acompanhar a sua rotina e guardar as histórias que só
                     você pode viver.
-                </p>
+                </motion.p>
             </div>
         </section>
     );
