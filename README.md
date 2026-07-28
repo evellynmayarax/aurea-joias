@@ -1,9 +1,11 @@
 <p align="center">
-    <img
-        src="./docs/readme/project-cover.png"
-        alt="Auréa Joias — experiência digital para joalheria"
-        width="100%"
-    />
+    <a href="https://aurea-joias.vercel.app/">
+        <img
+            src="./docs/readme/project-cover.png"
+            alt="Auréa Joias — acesse o projeto"
+            width="100%"
+        />
+    </a>
 </p>
 
 <br />
@@ -53,6 +55,15 @@
 <p align="center">
     A proposta foi construir uma vitrine digital com atmosfera editorial,<br />
     valorizando os detalhes das peças e a identidade de quem as usa.
+</p>
+
+<p align="center">
+    <a href="https://aurea-joias.vercel.app/">
+        <img
+            src="https://img.shields.io/badge/Ver_projeto-8B611E?style=for-the-badge&logo=vercel&logoColor=white"
+            alt="Ver projeto Auréa Joias publicado"
+        />
+    </a>
 </p>
 
 <br />
