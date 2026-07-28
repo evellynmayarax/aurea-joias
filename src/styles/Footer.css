@@ -215,7 +215,7 @@
         margin-top: 0;
 
         font-family: var(--font-title);
-        font-size: clamp(1.6rem, 7vw, 2.1rem);
+        font-size: clamp(1.5rem, 5vw, 2rem);
         font-weight: 400;
         line-height: 0.98;
         letter-spacing: -0.03em;
@@ -224,13 +224,13 @@
     .footer__title {
         margin-bottom: 1rem;
 
-        font-size: 1.0625rem;
+        font-size: 0.8rem;
     }
 
     .footer__list {
         gap: 0.2rem;
 
-        font-size: 0.8125rem;
+        font-size: 0.7rem;
         line-height: 1.4;
     }
 
