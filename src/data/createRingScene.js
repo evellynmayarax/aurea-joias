@@ -11,11 +11,12 @@ function createRingScene({
     sceneContainer,
     canvas,
     copy,
-    onReady = () => { },
-    onError = () => { },
+    reducedMotion = false,
+    onReady = () => {},
+    onError = () => {},
 }) {
     if (!section || !sceneContainer || !canvas || !copy) {
-        return () => { };
+        return () => {};
     }
 
     const mobileMediaQuery = window.matchMedia(
@@ -25,6 +26,14 @@ function createRingScene({
     const desktopInteractionMediaQuery = window.matchMedia(
         "(min-width: 1025px) and (hover: hover) and (pointer: fine)",
     );
+
+    /*
+     * Sobe o anel somente no desktop para alinhar o centro
+     * do modelo 3D ao centro visual do bloco de texto.
+     */
+    const verticalOffset = mobileMediaQuery.matches
+        ? 0
+        : 0.8;
 
     const scene = new THREE.Scene();
 
@@ -74,6 +83,7 @@ function createRingScene({
 
     function updateInteractionMode() {
         const canInteract =
+            !reducedMotion &&
             desktopInteractionMediaQuery.matches;
 
         controls.enabled = canInteract;
@@ -203,7 +213,9 @@ function createRingScene({
         -0.18,
     );
 
-    scrollGroup.position.y = -0.65;
+    scrollGroup.position.y = reducedMotion
+        ? verticalOffset
+        : -0.65 + verticalOffset;
 
     scene.add(scrollGroup);
 
@@ -228,6 +240,14 @@ function createRingScene({
 
     copy.style.opacity = "1";
     copy.style.transform = "none";
+
+    if (reducedMotion) {
+        copyWords.forEach((word) => {
+            word.style.opacity = "1";
+            word.style.transform = "none";
+            word.style.filter = "none";
+        });
+    }
 
     function failScene(error) {
         if (destroyed || hasFailed) {
@@ -492,13 +512,18 @@ function createRingScene({
 
         controls.handleResize();
         fitCameraToModel();
+
+        if (reducedMotion && ring) {
+            renderer.render(scene, camera);
+        }
     }
 
     const resizeObserver =
         new ResizeObserver(resizeRenderer);
 
-    const visibilityObserver =
-        new IntersectionObserver(
+    const visibilityObserver = reducedMotion
+        ? null
+        : new IntersectionObserver(
             ([entry]) => {
                 isVisible = entry.isIntersecting;
             },
@@ -509,21 +534,24 @@ function createRingScene({
         );
 
     resizeObserver.observe(sceneContainer);
-    visibilityObserver.observe(section);
+    visibilityObserver?.observe(section);
 
-    window.addEventListener(
-        "scroll",
-        updateScrollProgress,
-        { passive: true },
-    );
+    if (!reducedMotion) {
+        window.addEventListener(
+            "scroll",
+            updateScrollProgress,
+            { passive: true },
+        );
 
-    window.addEventListener(
-        "resize",
-        updateScrollProgress,
-        { passive: true },
-    );
+        window.addEventListener(
+            "resize",
+            updateScrollProgress,
+            { passive: true },
+        );
 
-    updateScrollProgress();
+        updateScrollProgress();
+    }
+
     resizeRenderer();
 
     function animate() {
@@ -563,7 +591,8 @@ function createRingScene({
             -scrollTravel +
             currentProgress *
             scrollTravel *
-            2;
+            2 +
+            verticalOffset;
 
         const copyStart = mobileMediaQuery.matches
             ? 0.03
@@ -628,7 +657,9 @@ function createRingScene({
         renderer.render(scene, camera);
     }
 
-    animate();
+    if (!reducedMotion) {
+        animate();
+    }
 
     /*
      * O retorno da função faz todo o cleanup quando
@@ -639,15 +670,17 @@ function createRingScene({
 
         window.cancelAnimationFrame(frameId);
 
-        window.removeEventListener(
-            "scroll",
-            updateScrollProgress,
-        );
+        if (!reducedMotion) {
+            window.removeEventListener(
+                "scroll",
+                updateScrollProgress,
+            );
 
-        window.removeEventListener(
-            "resize",
-            updateScrollProgress,
-        );
+            window.removeEventListener(
+                "resize",
+                updateScrollProgress,
+            );
+        }
 
         controls.removeEventListener(
             "start",
@@ -693,7 +726,7 @@ function createRingScene({
         sceneContainer.removeAttribute("title");
 
         resizeObserver.disconnect();
-        visibilityObserver.disconnect();
+        visibilityObserver?.disconnect();
 
         if (ring) {
             scrollGroup.remove(ring);

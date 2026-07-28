@@ -43,14 +43,7 @@ function RingExperience() {
     const canvasRef = useRef(null);
     const copyRef = useRef(null);
     const [sceneState, setSceneState] =
-        useState(() =>
-            typeof window !== "undefined" &&
-                window.matchMedia(
-                    "(prefers-reduced-motion: reduce)",
-                ).matches
-                ? "static"
-                : "loading",
-        );
+        useState("loading");
 
     useEffect(() => {
         const section = sectionRef.current;
@@ -98,8 +91,7 @@ function RingExperience() {
             if (
                 cancelled ||
                 isLoading ||
-                destroyRingScene ||
-                reducedMotionMediaQuery.matches
+                destroyRingScene
             ) {
                 return;
             }
@@ -124,8 +116,7 @@ function RingExperience() {
 
                 if (
                     cancelled ||
-                    currentAttempt !== loadAttempt ||
-                    reducedMotionMediaQuery.matches
+                    currentAttempt !== loadAttempt
                 ) {
                     isLoading = false;
                     return;
@@ -136,13 +127,19 @@ function RingExperience() {
                     sceneContainer,
                     canvas,
                     copy,
+                    reducedMotion:
+                        reducedMotionMediaQuery.matches,
                     onReady: () => {
                         if (
                             !cancelled &&
                             currentAttempt ===
-                            loadAttempt
+                                loadAttempt
                         ) {
-                            setSceneState("ready");
+                            setSceneState(
+                                reducedMotionMediaQuery.matches
+                                    ? "static"
+                                    : "ready",
+                            );
                         }
                     },
                     onError: reportSceneError,
@@ -162,10 +159,7 @@ function RingExperience() {
         }
 
         function observeScene() {
-            if (
-                cancelled ||
-                reducedMotionMediaQuery.matches
-            ) {
+            if (cancelled) {
                 return;
             }
 
@@ -196,16 +190,11 @@ function RingExperience() {
             loadAttempt += 1;
             isLoading = false;
 
-            if (reducedMotionMediaQuery.matches) {
-                const destroyCurrentScene =
-                    destroyRingScene;
+            const destroyCurrentScene =
+                destroyRingScene;
 
-                destroyRingScene = null;
-                destroyCurrentScene?.();
-                setSceneState("static");
-                return;
-            }
-
+            destroyRingScene = null;
+            destroyCurrentScene?.();
             setSceneState("loading");
             observeScene();
         }
@@ -215,9 +204,7 @@ function RingExperience() {
             updateMotionPreference,
         );
 
-        if (!reducedMotionMediaQuery.matches) {
-            observeScene();
-        }
+        observeScene();
 
         return () => {
             cancelled = true;
