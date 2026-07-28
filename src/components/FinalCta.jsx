@@ -1,6 +1,24 @@
+import { motion } from "motion/react";
+
 import ctaDesktop from "../assets/cta/cta-image-desktop.webp";
 import ctaMobile from "../assets/cta/cta-image-mobile.webp";
+
 import "../styles/FinalCta.css";
+
+const copyAnimation = {
+    hidden: {
+        opacity: 0,
+        y: 32,
+    },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            duration: 0.75,
+            ease: [0.22, 1, 0.36, 1],
+        },
+    },
+};
 
 function FinalCta() {
     return (
@@ -26,20 +44,33 @@ function FinalCta() {
             <div
                 className="final-cta__overlay"
                 aria-hidden="true"
-            ></div>
+            />
 
             <div className="final-cta__content container">
-                <div className="final-cta__copy">
-                    <h2
+                <motion.div
+                    className="final-cta__copy"
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{
+                        once: true,
+                        amount: 0.35,
+                    }}
+                    transition={{
+                        staggerChildren: 0.14,
+                    }}
+                >
+                    <motion.h2
                         className="final-cta__title"
                         id="final-cta-title"
+                        variants={copyAnimation}
                     >
                         Criamos pensando em você, para você
-                    </h2>
+                    </motion.h2>
 
-                    <a
+                    <motion.a
                         className="final-cta__link"
                         href="#rodape"
+                        variants={copyAnimation}
                     >
                         <span className="final-cta__link-strong">
                             escolha
@@ -48,11 +79,11 @@ function FinalCta() {
                         <span className="final-cta__link-regular">
                             sua joia
                         </span>
-                    </a>
-                </div>
+                    </motion.a>
+                </motion.div>
             </div>
         </section>
     );
 }
 
-export default FinalCta; 
+export default FinalCta;
